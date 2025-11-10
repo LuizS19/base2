@@ -1,0 +1,19 @@
+{
+  "name": "Trello Data Connector",
+  "details": "Power-Up para leitura e escrita de dados em cards do Trello, com exportação para CSV.",
+  "homepage": "https://trello.com/",
+  "author": "Luis F. Santos",
+  "capabilities": ["card-buttons", "board-buttons"],
+  "connectors": {
+    "iframe": {
+      "url": "https://base-trello.vercel.app/index.html"
+    }
+  },
+  "authorization": {
+    "scopes": ["read", "write"],
+    "access": "public"
+  },
+  "icon": {
+    "url": "https://base-trello.vercel.app/icon.png"
+  }
+}
