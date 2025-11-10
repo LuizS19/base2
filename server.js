@@ -4,6 +4,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import fetch from "node-fetch"; // ✅ necessário para requisições HTTP no Vercel
 import { writeFileSync } from "fs";
 
 // -------------------------------------------
@@ -23,12 +24,13 @@ const TOKEN = "ATTA78346b1d891c7208078545999724c985575bc696bf078d1624b2dcbcc5d2b
 const BOARD_ID = "XyMSKz4a";
 
 // -------------------------------------------
-// FUNÇÕES DE INTEGRAÇÃO COM A API DO TRELLO
+// FUNÇÃO: Buscar todos os cards (inclusive arquivados)
 // -------------------------------------------
-
-async function getCards() {
-  const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards?key=${API_KEY}&token=${TOKEN}`;
+async function getCards(includeClosed = false) {
+  const status = includeClosed ? "all" : "open"; // ✅ busca abertos ou todos
+  const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards/${status}?key=${API_KEY}&token=${TOKEN}`;
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`Erro na requisição: ${res.status}`);
   const data = await res.json();
   return data;
 }
@@ -37,13 +39,15 @@ async function getCards() {
 // ROTAS DO SERVIDOR
 // -------------------------------------------
 
+// Página inicial
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
+// Rota: listar todos os cards abertos
 app.get("/cards", async (req, res) => {
   try {
-    const cards = await getCards();
+    const cards = await getCards(false);
     res.json(cards);
   } catch (err) {
     console.error(err);
@@ -51,12 +55,13 @@ app.get("/cards", async (req, res) => {
   }
 });
 
+// Rota: exportar todos os cards abertos como CSV
 app.get("/export", async (req, res) => {
   try {
-    const cards = await getCards();
+    const cards = await getCards(false);
     let csv = "Nome,Descrição,Data\n";
     cards.forEach(c => {
-      csv += `"${c.name}","${c.desc.replace(/\n/g, " ")}","${c.dateLastActivity}"\n`;
+      csv += `"${c.name}","${(c.desc || "").replace(/\n/g, " ")}","${c.dateLastActivity}"\n`;
     });
 
     res.setHeader("Content-disposition", "attachment; filename=cards.csv");
@@ -68,17 +73,20 @@ app.get("/export", async (req, res) => {
   }
 });
 
+// Rota: gerar base de dados com cards arquivados
 app.get("/base", async (req, res) => {
   try {
     const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards/closed?key=${API_KEY}&token=${TOKEN}`;
     const response = await fetch(url);
+    if (!response.ok) throw new Error(`Erro ao acessar API: ${response.status}`);
     const cards = await response.json();
 
-    const parseInfo = (desc) => {
-      const cidadeMatch = desc.match(/Cidade:\s*([A-Za-zÀ-ÿ\s]+)/i);
-      const ufMatch = desc.match(/UF:\s*([A-Z]{2})/i);
-      const tipoMatch = desc.match(/(link dedicado|banda larga|l2l)/i);
-      const valorMatch = desc.match(/R?\$?\s?([\d.,]+)/i);
+    // Função para extrair dados de Cidade, UF, Tipo e Valor
+    const parseInfo = (text) => {
+      const cidadeMatch = text.match(/(?:Cidade|Localidade)[:\-]?\s*([A-Za-zÀ-ÿ\s]+)/i);
+      const ufMatch = text.match(/UF[:\-]?\s*([A-Z]{2})/i);
+      const tipoMatch = text.match(/(link dedicado|banda larga|l2l)/i);
+      const valorMatch = text.match(/R?\$?\s?([\d.,]+)/i);
 
       return {
         cidade: cidadeMatch ? cidadeMatch[1].trim() : "",
@@ -88,22 +96,25 @@ app.get("/base", async (req, res) => {
       };
     };
 
+    // Montar CSV com as informações extraídas
     let csv = "Cidade,UF,Tipo,Valor\n";
     cards.forEach(card => {
-      const info = parseInfo(card.desc + " " + card.name);
+      const texto = `${card.name} ${card.desc}`;
+      const info = parseInfo(texto);
       csv += `"${info.cidade}","${info.uf}","${info.tipo}","${info.valor}"\n`;
     });
 
+    // Enviar CSV para download
     res.setHeader("Content-disposition", "attachment; filename=base_trello.csv");
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
   } catch (err) {
-    console.error(err);
+    console.error("Erro ao gerar base:", err);
     res.status(500).send("Erro ao gerar base CSV");
   }
 });
 
 // -------------------------------------------
-// EXPORTAÇÃO PARA A VERCEL (sem app.listen)
+// EXPORTAÇÃO PARA A VERCEL
 // -------------------------------------------
 export default app;
