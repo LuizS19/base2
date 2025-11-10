@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trello Data Connector</title>
+  <title>📊 Base de Viabilidades</title>
   <style>
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -25,7 +25,6 @@
     }
 
     .btn {
-      display: inline-block;
       background-color: #238636;
       color: white;
       padding: 10px 20px;
@@ -55,12 +54,18 @@
       display: none;
     }
 
-    input {
-      width: 300px;
+    .filters {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    input, select {
       padding: 10px;
       border-radius: 6px;
       border: 1px solid #30363d;
-      margin-top: 20px;
       background-color: #161b22;
       color: #e6edf3;
     }
@@ -104,6 +109,150 @@
 
 <body>
   <h1>📊 Base de Viabilidades</h1>
-  <p>Pesquise cidades, tipos de serviço ou consulte preços diretamente.</p>
+  <p>Pesquise e filtre cidades, UFs e tipos de serviço para consultar preços.</p>
 
-  <!-- Botões pr
+  <!-- Botões principais -->
+  <button id="btnExport" class="btn">📄 Exportar Todos os Cards</button>
+  <button id="btnBase" class="btn">📊 Exportar Base Filtrada</button>
+
+  <div id="status" class="loading">⏳ Carregando base, aguarde...</div>
+
+  <!-- Filtros -->
+  <div class="filters">
+    <input type="text" id="busca" placeholder="🔍 Buscar cidade, IP ou valor..." />
+    <select id="filtroUF">
+      <option value="">🌎 Todas as UFs</option>
+    </select>
+    <select id="filtroTipo">
+      <option value="">📡 Todos os Tipos</option>
+    </select>
+  </div>
+
+  <!-- Tabela -->
+  <table id="tabela">
+    <thead>
+      <tr>
+        <th>Cidade</th>
+        <th>UF</th>
+        <th>Tipo</th>
+        <th>Velocidade</th>
+        <th>Bloco IP</th>
+        <th>Valor</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <footer>
+    Feito por <a href="https://github.com/LuizS19" target="_blank">LuizS19</a> · Powered by Trello API
+  </footer>
+
+  <script>
+    const btnExport = document.getElementById("btnExport");
+    const btnBase = document.getElementById("btnBase");
+    const statusDiv = document.getElementById("status");
+    const buscaInput = document.getElementById("busca");
+    const tabelaBody = document.querySelector("#tabela tbody");
+    const filtroUF = document.getElementById("filtroUF");
+    const filtroTipo = document.getElementById("filtroTipo");
+
+    let dadosBase = [];
+
+    async function baixarCSV(url, botao) {
+      try {
+        botao.disabled = true;
+        statusDiv.style.display = "block";
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Erro ao baixar CSV");
+        const blob = await resp.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = url.includes("base") ? "base_filtrada.csv" : "cards.csv";
+        link.click();
+      } catch (err) {
+        alert("❌ Erro: " + err.message);
+      } finally {
+        botao.disabled = false;
+        statusDiv.style.display = "none";
+      }
+    }
+
+    btnExport.addEventListener("click", () => baixarCSV("/export", btnExport));
+    btnBase.addEventListener("click", () => baixarCSV("/base", btnBase));
+
+    async function carregarBase() {
+      statusDiv.style.display = "block";
+      try {
+        const resp = await fetch("/base");
+        const texto = await resp.text();
+        const linhas = texto.split("\n").slice(1);
+        dadosBase = linhas
+          .map(l => l.split(","))
+          .filter(l => l.length >= 6)
+          .map(l => ({
+            cidade: l[0].replace(/"/g, "").trim(),
+            uf: l[1].replace(/"/g, "").trim(),
+            tipo: l[2].replace(/"/g, "").trim(),
+            velocidade: l[3].replace(/"/g, "").trim(),
+            ip: l[4].replace(/"/g, "").trim(),
+            valor: l[5].replace(/"/g, "").trim(),
+          }));
+        popularFiltros();
+        atualizarTabela(dadosBase);
+      } catch (err) {
+        alert("❌ Erro ao carregar base.");
+      } finally {
+        statusDiv.style.display = "none";
+      }
+    }
+
+    function popularFiltros() {
+      const ufs = [...new Set(dadosBase.map(d => d.uf).filter(Boolean))].sort();
+      const tipos = [...new Set(dadosBase.map(d => d.tipo).filter(Boolean))].sort();
+
+      filtroUF.innerHTML = '<option value="">🌎 Todas as UFs</option>' + 
+        ufs.map(uf => `<option value="${uf}">${uf}</option>`).join("");
+
+      filtroTipo.innerHTML = '<option value="">📡 Todos os Tipos</option>' + 
+        tipos.map(t => `<option value="${t}">${t}</option>`).join("");
+    }
+
+    function atualizarTabela(lista) {
+      tabelaBody.innerHTML = "";
+      lista.forEach(item => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${item.cidade}</td>
+          <td>${item.uf}</td>
+          <td>${item.tipo}</td>
+          <td>${item.velocidade}</td>
+          <td>${item.ip}</td>
+          <td>${item.valor}</td>
+        `;
+        tabelaBody.appendChild(tr);
+      });
+    }
+
+    function aplicarFiltros() {
+      const termo = buscaInput.value.toLowerCase();
+      const ufSel = filtroUF.value;
+      const tipoSel = filtroTipo.value;
+
+      const filtrado = dadosBase.filter(item => {
+        const combinaBusca = Object.values(item).some(v => v.toLowerCase().includes(termo));
+        const combinaUF = !ufSel || item.uf === ufSel;
+        const combinaTipo = !tipoSel || item.tipo === tipoSel;
+        return combinaBusca && combinaUF && combinaTipo;
+      });
+
+      atualizarTabela(filtrado);
+    }
+
+    buscaInput.addEventListener("input", aplicarFiltros);
+    filtroUF.addEventListener("change", aplicarFiltros);
+    filtroTipo.addEventListener("change", aplicarFiltros);
+
+    carregarBase();
+  </script>
+</body>
+</html>
