@@ -72,7 +72,7 @@
 
     table {
       width: 100%;
-      max-width: 900px;
+      max-width: 950px;
       margin: 30px auto;
       border-collapse: collapse;
       background-color: #161b22;
@@ -88,6 +88,12 @@
     th {
       background-color: #21262d;
       color: #58a6ff;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover {
+      background-color: #30363d;
     }
 
     tr:hover {
@@ -104,12 +110,18 @@
       color: #58a6ff;
       text-decoration: none;
     }
+
+    .arrow {
+      margin-left: 6px;
+      font-size: 0.8rem;
+      color: #768390;
+    }
   </style>
 </head>
 
 <body>
   <h1>📊 Base de Viabilidades</h1>
-  <p>Pesquise e filtre cidades, UFs e tipos de serviço para consultar preços.</p>
+  <p>Pesquise, filtre e ordene cidades, UFs e tipos de serviço para consultar preços.</p>
 
   <!-- Botões principais -->
   <button id="btnExport" class="btn">📄 Exportar Todos os Cards</button>
@@ -132,12 +144,12 @@
   <table id="tabela">
     <thead>
       <tr>
-        <th>Cidade</th>
-        <th>UF</th>
-        <th>Tipo</th>
-        <th>Velocidade</th>
-        <th>Bloco IP</th>
-        <th>Valor</th>
+        <th data-col="cidade">Cidade</th>
+        <th data-col="uf">UF</th>
+        <th data-col="tipo">Tipo</th>
+        <th data-col="velocidade">Velocidade</th>
+        <th data-col="ip">Bloco IP</th>
+        <th data-col="valor">Valor</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -155,8 +167,11 @@
     const tabelaBody = document.querySelector("#tabela tbody");
     const filtroUF = document.getElementById("filtroUF");
     const filtroTipo = document.getElementById("filtroTipo");
+    const headers = document.querySelectorAll("th[data-col]");
 
     let dadosBase = [];
+    let sortCol = null;
+    let sortDir = 1;
 
     async function baixarCSV(url, botao) {
       try {
@@ -195,7 +210,7 @@
             tipo: l[2].replace(/"/g, "").trim(),
             velocidade: l[3].replace(/"/g, "").trim(),
             ip: l[4].replace(/"/g, "").trim(),
-            valor: l[5].replace(/"/g, "").trim(),
+            valor: parseFloat(l[5].replace(/"/g, "").trim()) || 0,
           }));
         popularFiltros();
         atualizarTabela(dadosBase);
@@ -227,7 +242,7 @@
           <td>${item.tipo}</td>
           <td>${item.velocidade}</td>
           <td>${item.ip}</td>
-          <td>${item.valor}</td>
+          <td>${item.valor.toFixed(2)}</td>
         `;
         tabelaBody.appendChild(tr);
       });
@@ -238,15 +253,40 @@
       const ufSel = filtroUF.value;
       const tipoSel = filtroTipo.value;
 
-      const filtrado = dadosBase.filter(item => {
-        const combinaBusca = Object.values(item).some(v => v.toLowerCase().includes(termo));
+      let filtrado = dadosBase.filter(item => {
+        const combinaBusca = Object.values(item)
+          .some(v => String(v).toLowerCase().includes(termo));
         const combinaUF = !ufSel || item.uf === ufSel;
         const combinaTipo = !tipoSel || item.tipo === tipoSel;
         return combinaBusca && combinaUF && combinaTipo;
       });
 
+      if (sortCol) {
+        filtrado.sort((a, b) => {
+          if (a[sortCol] < b[sortCol]) return -1 * sortDir;
+          if (a[sortCol] > b[sortCol]) return 1 * sortDir;
+          return 0;
+        });
+      }
+
       atualizarTabela(filtrado);
     }
+
+    // Clique para ordenar
+    headers.forEach(th => {
+      th.addEventListener("click", () => {
+        const col = th.dataset.col;
+        if (sortCol === col) sortDir *= -1;
+        else {
+          sortCol = col;
+          sortDir = 1;
+        }
+
+        headers.forEach(h => h.innerHTML = h.textContent);
+        th.innerHTML = th.textContent + (sortDir === 1 ? " 🔼" : " 🔽");
+        aplicarFiltros();
+      });
+    });
 
     buscaInput.addEventListener("input", aplicarFiltros);
     filtroUF.addEventListener("change", aplicarFiltros);
