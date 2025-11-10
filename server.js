@@ -4,7 +4,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch"; // Adicionado!
+import fetch from "node-fetch";
 import { writeFileSync } from "fs";
 
 // -------------------------------------------
@@ -24,7 +24,7 @@ const TOKEN = "ATTA78346b1d891c7208078545999724c985575bc696bf078d1624b2dcbcc5d2b
 const BOARD_ID = "XyMSKz4a";
 
 // -------------------------------------------
-// FUNÇÕES DE INTEGRAÇÃO COM A API DO TRELLO
+// FUNÇÃO PARA BUSCAR CARDS DO TRELLO
 // -------------------------------------------
 async function getCards(includeArchived = false) {
   const filter = includeArchived ? "all" : "open";
@@ -48,7 +48,7 @@ app.get("/", (req, res) => {
 // Exporta todos os cards (abertos e arquivados)
 app.get("/export", async (req, res) => {
   try {
-    const cards = await getCards(true); // inclui arquivados também
+    const cards = await getCards(true);
     if (!cards.length) return res.status(404).send("Nenhum card encontrado.");
 
     let csv = "Nome,Descrição,Data\n";
@@ -65,37 +65,47 @@ app.get("/export", async (req, res) => {
   }
 });
 
-// Gera base com Cidade / UF / Tipo / Valor
+// -------------------------------------------
+// BASE DE DADOS FILTRADA (CIDADE, UF, TIPO, VELOCIDADE, IP, VALOR)
+// -------------------------------------------
 app.get("/base", async (req, res) => {
   try {
-    const cards = await getCards(true); // pega abertos e arquivados
+    const cards = await getCards(true);
 
     const parseInfo = (text) => {
       const cidadeMatch = text.match(/Cidade:\s*([A-Za-zÀ-ÿ\s]+)/i);
       const ufMatch = text.match(/UF:\s*([A-Z]{2})/i);
       const tipoMatch = text.match(/(link dedicado|banda larga|l2l)/i);
       const valorMatch = text.match(/R?\$?\s?([\d.,]+)/i);
+      const ipMatch = text.match(/IP\s*[:\-]?\s*([\d./]+)/i);
+      const velMatch = text.match(/(\d+\s?(mb|gb))/i);
+
       return {
         cidade: cidadeMatch ? cidadeMatch[1].trim() : "",
         uf: ufMatch ? ufMatch[1].trim().toUpperCase() : "",
         tipo: tipoMatch ? tipoMatch[1].toUpperCase() : "",
+        velocidade: velMatch ? velMatch[1].toUpperCase() : "",
+        bloco_ip: ipMatch ? ipMatch[1].trim() : "",
         valor: valorMatch ? valorMatch[1].replace(",", ".") : ""
       };
     };
 
-    let csv = "Cidade,UF,Tipo,Valor\n";
+    let csv = "Cidade,UF,Tipo,Velocidade,Bloco_IP,Valor\n";
     cards.forEach(card => {
-      const info = parseInfo(card.name + " " + card.desc);
-      if (info.cidade || info.uf || info.tipo || info.valor)
-        csv += `"${info.cidade}","${info.uf}","${info.tipo}","${info.valor}"\n`;
+      const texto = (card.name + " " + card.desc).toLowerCase();
+      const info = parseInfo(texto);
+      if (info.cidade && info.uf && info.valor) {
+        csv += `"${info.cidade}","${info.uf}","${info.tipo}","${info.velocidade}","${info.bloco_ip}","${info.valor}"\n`;
+      }
     });
 
-    res.setHeader("Content-disposition", "attachment; filename=base_trello.csv");
+    res.setHeader("Content-disposition", "attachment; filename=base_filtrada.csv");
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
+
   } catch (err) {
     console.error(err);
-    res.status(500).send("Erro ao gerar base CSV");
+    res.status(500).send("Erro ao gerar base CSV filtrada");
   }
 });
 
