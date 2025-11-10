@@ -4,7 +4,7 @@
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
-import fetch from "node-fetch"; // ✅ necessário para requisições HTTP no Vercel
+import fetch from "node-fetch"; // Adicionado!
 import { writeFileSync } from "fs";
 
 // -------------------------------------------
@@ -24,15 +24,16 @@ const TOKEN = "ATTA78346b1d891c7208078545999724c985575bc696bf078d1624b2dcbcc5d2b
 const BOARD_ID = "XyMSKz4a";
 
 // -------------------------------------------
-// FUNÇÃO: Buscar todos os cards (inclusive arquivados)
+// FUNÇÕES DE INTEGRAÇÃO COM A API DO TRELLO
 // -------------------------------------------
-async function getCards(includeClosed = false) {
-  const status = includeClosed ? "all" : "open"; // ✅ busca abertos ou todos
-  const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards/${status}?key=${API_KEY}&token=${TOKEN}`;
+async function getCards(includeArchived = false) {
+  const filter = includeArchived ? "all" : "open";
+  const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards/${filter}?key=${API_KEY}&token=${TOKEN}`;
+  
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erro na requisição: ${res.status}`);
-  const data = await res.json();
-  return data;
+  if (!res.ok) throw new Error(`Erro ao buscar cards: ${res.status}`);
+  
+  return await res.json();
 }
 
 // -------------------------------------------
@@ -44,24 +45,15 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Rota: listar todos os cards abertos
-app.get("/cards", async (req, res) => {
-  try {
-    const cards = await getCards(false);
-    res.json(cards);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erro ao buscar cards");
-  }
-});
-
-// Rota: exportar todos os cards abertos como CSV
+// Exporta todos os cards (abertos e arquivados)
 app.get("/export", async (req, res) => {
   try {
-    const cards = await getCards(false);
+    const cards = await getCards(true); // inclui arquivados também
+    if (!cards.length) return res.status(404).send("Nenhum card encontrado.");
+
     let csv = "Nome,Descrição,Data\n";
     cards.forEach(c => {
-      csv += `"${c.name}","${(c.desc || "").replace(/\n/g, " ")}","${c.dateLastActivity}"\n`;
+      csv += `"${c.name.replace(/"/g, "'")}","${(c.desc || "").replace(/\n/g, " ")}","${c.dateLastActivity}"\n`;
     });
 
     res.setHeader("Content-disposition", "attachment; filename=cards.csv");
@@ -73,21 +65,16 @@ app.get("/export", async (req, res) => {
   }
 });
 
-// Rota: gerar base de dados com cards arquivados
+// Gera base com Cidade / UF / Tipo / Valor
 app.get("/base", async (req, res) => {
   try {
-    const url = `https://api.trello.com/1/boards/${BOARD_ID}/cards/closed?key=${API_KEY}&token=${TOKEN}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Erro ao acessar API: ${response.status}`);
-    const cards = await response.json();
+    const cards = await getCards(true); // pega abertos e arquivados
 
-    // Função para extrair dados de Cidade, UF, Tipo e Valor
     const parseInfo = (text) => {
-      const cidadeMatch = text.match(/(?:Cidade|Localidade)[:\-]?\s*([A-Za-zÀ-ÿ\s]+)/i);
-      const ufMatch = text.match(/UF[:\-]?\s*([A-Z]{2})/i);
+      const cidadeMatch = text.match(/Cidade:\s*([A-Za-zÀ-ÿ\s]+)/i);
+      const ufMatch = text.match(/UF:\s*([A-Z]{2})/i);
       const tipoMatch = text.match(/(link dedicado|banda larga|l2l)/i);
       const valorMatch = text.match(/R?\$?\s?([\d.,]+)/i);
-
       return {
         cidade: cidadeMatch ? cidadeMatch[1].trim() : "",
         uf: ufMatch ? ufMatch[1].trim().toUpperCase() : "",
@@ -96,20 +83,18 @@ app.get("/base", async (req, res) => {
       };
     };
 
-    // Montar CSV com as informações extraídas
     let csv = "Cidade,UF,Tipo,Valor\n";
     cards.forEach(card => {
-      const texto = `${card.name} ${card.desc}`;
-      const info = parseInfo(texto);
-      csv += `"${info.cidade}","${info.uf}","${info.tipo}","${info.valor}"\n`;
+      const info = parseInfo(card.name + " " + card.desc);
+      if (info.cidade || info.uf || info.tipo || info.valor)
+        csv += `"${info.cidade}","${info.uf}","${info.tipo}","${info.valor}"\n`;
     });
 
-    // Enviar CSV para download
     res.setHeader("Content-disposition", "attachment; filename=base_trello.csv");
     res.set("Content-Type", "text/csv");
     res.status(200).send(csv);
   } catch (err) {
-    console.error("Erro ao gerar base:", err);
+    console.error(err);
     res.status(500).send("Erro ao gerar base CSV");
   }
 });
