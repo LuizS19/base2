@@ -10,31 +10,31 @@
       background-color: #0d1117;
       color: #e6edf3;
       text-align: center;
-      padding: 60px 20px;
+      padding: 40px 20px;
     }
 
     h1 {
       font-size: 1.8rem;
       color: #58a6ff;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
 
     p {
-      font-size: 1rem;
       color: #adbac7;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     .btn {
       display: inline-block;
       background-color: #238636;
       color: white;
-      text-decoration: none;
-      padding: 12px 25px;
+      padding: 10px 20px;
       border-radius: 8px;
       font-weight: bold;
-      transition: 0.2s ease;
+      border: none;
+      cursor: pointer;
       margin: 5px;
+      transition: 0.2s ease;
     }
 
     .btn:hover {
@@ -42,8 +42,55 @@
       transform: scale(1.05);
     }
 
+    .btn:disabled {
+      background-color: #30363d;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .loading {
+      color: #adbac7;
+      font-size: 1rem;
+      margin: 15px 0;
+      display: none;
+    }
+
+    input {
+      width: 300px;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #30363d;
+      margin-top: 20px;
+      background-color: #161b22;
+      color: #e6edf3;
+    }
+
+    table {
+      width: 100%;
+      max-width: 900px;
+      margin: 30px auto;
+      border-collapse: collapse;
+      background-color: #161b22;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #30363d;
+    }
+
+    th {
+      background-color: #21262d;
+      color: #58a6ff;
+    }
+
+    tr:hover {
+      background-color: #1c2128;
+    }
+
     footer {
-      margin-top: 60px;
+      margin-top: 40px;
       color: #768390;
       font-size: 0.85rem;
     }
@@ -56,15 +103,7 @@
 </head>
 
 <body>
-  <h1>📂 Trello Data Connector</h1>
-  <p>Conecte, consulte e exporte dados dos seus cards do Trello.</p>
+  <h1>📊 Base de Viabilidades</h1>
+  <p>Pesquise cidades, tipos de serviço ou consulte preços diretamente.</p>
 
-  <!-- Botões de Exportação -->
-  <a href="/export" class="btn">📄 Exportar Todos os Cards</a>
-  <a href="/base" class="btn">📊 Exportar Base Filtrada</a>
-
-  <footer>
-    Feito por <a href="https://github.com/LuizS19" target="_blank">LuizS19</a> · Powered by Trello API
-  </footer>
-</body>
-</html>
+  <!-- Botões pr
