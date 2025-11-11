@@ -1,27 +1,84 @@
-<h1>Trello Data Connector</h1>
-<p>Conecte, consulte e exporte dados de cards.</p>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trello Data Connector</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: #fff;
+      margin: 0;
+      padding: 40px;
+    }
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    p {
+      margin-bottom: 20px;
+      color: #ccc;
+    }
+    .button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #0056b3;
+    }
+    .section {
+      margin-top: 30px;
+    }
+    .upload-container {
+      margin-top: 15px;
+      padding: 15px;
+      background: #1e1e1e;
+      border-radius: 10px;
+      border: 1px solid #333;
+      width: fit-content;
+    }
+    input[type="file"] {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📎 Trello Data Connector</h1>
+  <p>Conecte, consulte e exporte dados de cards.</p>
 
-<!-- Botão de exportação -->
-<a href="/export">
-  <button>📄 Exportar CSV</button>
-</a>
+  <!-- Exportar CSV -->
+  <div class="section">
+    <a href="/export"><button class="button">📄 Exportar CSV</button></a>
+  </div>
 
-<!-- Botão de importação -->
-<h2>Importar Base CSV</h2>
-<form id="uploadForm" enctype="multipart/form-data" method="post">
-  <input type="file" name="csvFile" accept=".csv" required>
-  <button type="submit">📤 Importar CSV</button>
-</form>
+  <!-- Importar CSV -->
+  <div class="section upload-container">
+    <h2>📤 Importar Base CSV</h2>
+    <form id="uploadForm" enctype="multipart/form-data" method="post">
+      <input type="file" name="csvFile" accept=".csv" required>
+      <br>
+      <button class="button" type="submit">Enviar e Padronizar</button>
+    </form>
+  </div>
 
-<script>
-document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = new FormData(e.target);
-  const res = await fetch("/upload", {
-    method: "POST",
-    body: formData
-  });
-  const text = await res.text();
-  alert(text);
-});
-</script>
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = new FormData(e.target);
+      const response = await fetch("/upload", {
+        method: "POST",
+        body: formData
+      });
+      const text = await response.text();
+      alert(text);
+    });
+  </script>
+</body>
+</html>
