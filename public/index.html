@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base de Viabilidades</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-gray-100 text-gray-900 flex flex-col items-center min-h-screen p-6">
+  <header class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-blue-700 mb-2">📊 Base de Viabilidades</h1>
+    <p class="text-gray-600">Gerencie e visualize sua base de preços e localidades.</p>
+  </header>
+
+  <main class="bg-white shadow-lg rounded-xl p-6 w-full max-w-5xl space-y-6">
+    <div class="grid grid-cols-2 gap-4">
+      <button id="exportBtn" class="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+        📄 Exportar Todos os Cards (CSV)
+      </button>
+
+      <button id="baseBtn" class="bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">
+        💾 Gerar Base Estruturada
+      </button>
+    </div>
+
+    <hr class="my-4">
+
+    <div>
+      <h2 class="text-lg font-semibold text-gray-800 mb-2">📤 Importar Base CSV</h2>
+      <input type="file" id="fileInput" accept=".csv" class="w-full border p-2 rounded">
+      <button id="uploadBtn" class="w-full mt-3 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
+        🚀 Enviar e Padronizar
+      </button>
+      <p id="fileName" class="text-sm text-gray-600 mt-2"></p>
+    </div>
+
+    <div id="preview" class="hidden mt-6 border-t pt-4">
+      <h3 class="font-semibold text-gray-700 mb-4">📋 Pré-visualização da Base:</h3>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white border border-gray-300 rounded-lg">
+          <thead class="bg-gray-200 text-gray-700">
+            <tr>
+              <th class="py-2 px-3 border">Cidade</th>
+              <th class="py-2 px-3 border">UF</th>
+              <th class="py-2 px-3 border">Tipo</th>
+              <th class="py-2 px-3 border">Velocidade</th>
+              <th class="py-2 px-3 border">Bloco IP</th>
+              <th class="py-2 px-3 border">Valor</th>
+              <th class="py-2 px-3 border">Meio</th>
+            </tr>
+          </thead>
+          <tbody id="csvTable" class="text-sm"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center mt-8 text-sm text-gray-500">
+    Desenvolvido por <b>Luiz Fernando</b> © 2025
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
